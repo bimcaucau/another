@@ -56,7 +56,7 @@ def get_contrastive_denoising_training_group(targets,
     dn_positive_idx = torch.nonzero(positive_gt_mask)[:, 1]
     dn_positive_idx = torch.split(dn_positive_idx, [n * num_group for n in num_gts])
     # total denoising queries
-    num_denoising = int(max_gt_num * 2 * num_group)
+    # num_denoising = int(max_gt_num * 2 * num_group)
 
     if label_noise_ratio > 0:
         mask = torch.rand_like(input_query_class, dtype=torch.float) < (label_noise_ratio * 0.5)
