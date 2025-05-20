@@ -31,7 +31,13 @@ class HFP(nn.Module):
         mask[..., :h_cutoff, :w_cutoff] = 0
         filtered = freq * mask
         hf = torch.fft.ifft2(filtered, norm='ortho').real
+
+        if H != H_pad or W != W_pad:  
+            hf = hf[:, :, :H, :W]  
+            
         return hf
+        #return hf
+    
     def forward(self, x):
         hf = self.high_pass_filter(x)
         gap = F.adaptive_avg_pool2d(hf, (self.pool_size, self.pool_size))
@@ -41,9 +47,16 @@ class HFP(nn.Module):
         channel_weight = self.conv_channel_final(torch.cat([gap_weight, gmp_weight], dim=1))
         channel_weight = torch.sigmoid(channel_weight)
         spatial_mask = torch.sigmoid(self.conv_spatial(hf))
-        out = x * channel_weight + x * spatial_mask
-        out = self.conv_out(out)
+        if spatial_mask.shape != x.shape:  
+            spatial_mask = F.interpolate(spatial_mask, size=(x.shape[2], x.shape[3]), mode='bilinear', align_corners=False)  
+        
+        # Apply attention  
+        out = x * channel_weight + x * spatial_mask  
+        out = self.conv_out(out)  
         return out
+        # out = x * channel_weight + x * spatial_mask
+        # out = self.conv_out(out)
+        # return out
 
 @register()
 class SDP(nn.Module):
