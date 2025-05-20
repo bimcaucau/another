@@ -124,7 +124,7 @@ class ConvertPILImage(T.Transform):
         self.dtype = dtype
         self.scale = scale
 
-    def _transform(self, inpt: Any, params: Dict[str, Any]) -> Any:
+    def transform(self, inpt: Any, params: Dict[str, Any]) -> Any: # changed from _transform -> transform
         inpt = F.pil_to_tensor(inpt)
         if self.dtype == 'float32':
             inpt = inpt.float()
