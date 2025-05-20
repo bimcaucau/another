@@ -75,7 +75,8 @@ class HybridHSFPNEncoder(nn.Module):
                  mode='hsfpn'  
                  ):  
         super().__init__()  
-        self.in_channels = in_channels  
+        self.in_channels = in_channels 
+        print(f"[DEBUG] Encoder initialized with in_channels: {self.in_channels}")
         self.feat_strides = feat_strides  
         self.hidden_dim = hidden_dim  
         self.use_encoder_idx = use_encoder_idx  
@@ -148,6 +149,8 @@ class HybridHSFPNEncoder(nn.Module):
         # Process input features  
         proj_feats = []  
         for i, feat in enumerate(feats):  
+            print(f"[DEBUG] Feature {i} shape: {feat.shape}")  
+            print(f"[DEBUG] Input proj {i} weight shape: {self.input_proj[i][0].weight.shape}")
             x = self.input_proj[i](feat)  
             proj_feats.append(x)  
           

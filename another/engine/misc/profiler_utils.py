@@ -14,7 +14,7 @@ def stats(
     input_shape = (1, 3, base_size, base_size)
 
     model_for_info = copy.deepcopy(cfg.model).deploy()
-
+    print(f"[DEBUG] Profiling with input shape: {input_shape}")
     flops, macs, _ = calculate_flops(model=model_for_info,
                                         input_shape=input_shape,
                                         output_as_string=True,
