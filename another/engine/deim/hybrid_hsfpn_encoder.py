@@ -161,7 +161,9 @@ class HybridHSFPNEncoder(nn.Module):
                 h, w = proj_feats[idx].shape[-2:]  
                 pos_embed = self.build_2d_sincos_position_embedding(  
                     w, h, self.hidden_dim, self.pe_temperature).to(proj_feats[idx].device)  
-                  
+                src = proj_feats[idx].flatten(2).permute(2, 0, 1)  # HW, B, C  
+                pos_embed = pos_embed.flatten(2).permute(2, 0, 1)  # HW, B, C  
+                print(f"[DEBUG] Before encoder - src shape: {src.shape}, pos_embed shape: {pos_embed.shape}")
                 # Reshape for transformer  
                 src = proj_feats[idx].flatten(2).permute(2, 0, 1)  # HW, B, C  
                 pos_embed = pos_embed.flatten(2).permute(2, 0, 1)  # HW, B, C  
@@ -221,8 +223,11 @@ class HybridHSFPNEncoder(nn.Module):
         pos_dim = embed_dim // 4  
         omega = torch.arange(pos_dim, dtype=torch.float32) / pos_dim  
         omega = 1. / (temperature ** omega)  
-  
+    
         out_w = grid_w.flatten()[..., None] @ omega[None]  
         out_h = grid_h.flatten()[..., None] @ omega[None]  
-  
-        return torch.concat([out_w.sin(), out_w.cos(), out_h.sin(), out_h.cos()], dim=1)[None, :, :]
+    
+        # Ensure the output has the correct shape for transformer input  
+        pos_emb = torch.concat([out_w.sin(), out_w.cos(), out_h.sin(), out_h.cos()], dim=1)  
+        # Reshape to [h*w, 1, embed_dim] to match the expected shape  
+        return pos_emb.reshape(h*w, 1, embed_dim)
