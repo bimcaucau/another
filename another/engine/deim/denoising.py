@@ -81,6 +81,10 @@ def get_contrastive_denoising_training_group(targets,
 
     tgt_size = num_denoising + num_queries
     attn_mask = torch.full([tgt_size, tgt_size], False, dtype=torch.bool, device=device)
+    print(f"num_denoising: {num_denoising}, num_queries: {num_queries}")  
+    print(f"max_gt_num: {max_gt_num}, num_group: {num_group}")  
+    print(f"Recalculated num_denoising: {int(max_gt_num * 2 * num_group)}")  
+    print(f"tgt_size: {tgt_size}, attn_mask shape: {attn_mask.shape}")
     # match query cannot see the reconstruction
     attn_mask[num_denoising:, :num_denoising] = True
 
