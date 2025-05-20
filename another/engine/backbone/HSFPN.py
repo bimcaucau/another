@@ -15,22 +15,22 @@ class HFP(nn.Module):
         self.conv_channel_final = nn.Conv2d(2 * channels, channels, kernel_size=1, groups=channels)
         self.conv_out = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
 
-    def high_pass_filter(self, x):
-        B, C, H, W = x.shape
-        H_pad = 2**math.ceil(math.log2(H))  
-        W_pad = 2**math.ceil(math.log2(W))  
+        def high_pass_filter(self, x):
+            B, C, H, W = x.shape
+            H_pad = 2**math.ceil(math.log2(H))  
+            W_pad = 2**math.ceil(math.log2(W))  
 
-        padded_x = F.pad(x, (0, W_pad - W, 0, H_pad - H))  
+            padded_x = F.pad(x, (0, W_pad - W, 0, H_pad - H))  
 
 
-        freq = torch.fft.fft2(padded_x, norm='ortho')
-        mask = torch.ones_like(freq)
-        h_cutoff = int(H * self.alpha)
-        w_cutoff = int(W * self.alpha)
-        mask[..., :h_cutoff, :w_cutoff] = 0
-        filtered = freq * mask
-        hf = torch.fft.ifft2(filtered, norm='ortho').real
-        return hf
+            freq = torch.fft.fft2(padded_x, norm='ortho')
+            mask = torch.ones_like(freq)
+            h_cutoff = int(H * self.alpha)
+            w_cutoff = int(W * self.alpha)
+            mask[..., :h_cutoff, :w_cutoff] = 0
+            filtered = freq * mask
+            hf = torch.fft.ifft2(filtered, norm='ortho').real
+            return hf
 
     def forward(self, x):
         hf = self.high_pass_filter(x)

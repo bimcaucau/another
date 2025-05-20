@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from ..core import register
+import math
 
 @register()
 class HFP(nn.Module):
@@ -17,7 +18,13 @@ class HFP(nn.Module):
 
     def high_pass_filter(self, x):
         B, C, H, W = x.shape
-        freq = torch.fft.fft2(x, norm='ortho')
+        H_pad = 2**math.ceil(math.log2(H))  
+        W_pad = 2**math.ceil(math.log2(W))  
+
+        padded_x = F.pad(x, (0, W_pad - W, 0, H_pad - H))  
+
+
+        freq = torch.fft.fft2(padded_x, norm='ortho')
         mask = torch.ones_like(freq)
         h_cutoff = int(H * self.alpha)
         w_cutoff = int(W * self.alpha)
@@ -25,7 +32,6 @@ class HFP(nn.Module):
         filtered = freq * mask
         hf = torch.fft.ifft2(filtered, norm='ortho').real
         return hf
-
     def forward(self, x):
         hf = self.high_pass_filter(x)
         gap = F.adaptive_avg_pool2d(hf, (self.pool_size, self.pool_size))
