@@ -641,11 +641,21 @@ class DFINETransformer(nn.Module):
         else:
             anchors = self.anchors
             valid_mask = self.valid_mask
+
+        print(f"[DEBUG] Valid mask shape: {valid_mask.shape}")  
         if memory.shape[0] > 1:
             anchors = anchors.repeat(memory.shape[0], 1, 1)
 
         # memory = torch.where(valid_mask, memory, 0)
         # TODO fix type error for onnx export
+        if valid_mask.shape[1] != memory.shape[1]:  
+            print(f"[DEBUG] Resizing valid_mask from {valid_mask.shape} to match memory shape {memory.shape}")  
+            # Create a new valid_mask with the correct size  
+            new_valid_mask = torch.ones((1, memory.shape[1], 1), device=memory.device, dtype=valid_mask.dtype)  
+            # Copy as much of the original mask as possible  
+            min_size = min(valid_mask.shape[1], memory.shape[1])  
+            new_valid_mask[0, :min_size, 0] = valid_mask[0, :min_size, 0]  
+            valid_mask = new_valid_mask  
         
         memory = valid_mask.to(memory.dtype) * memory
         print(f"[DEBUG] Memory shape: {memory.shape}, Valid mask shape: {valid_mask.shape}")
@@ -677,21 +687,8 @@ class DFINETransformer(nn.Module):
             enc_topk_bbox_unact = torch.concat([denoising_bbox_unact, enc_topk_bbox_unact], dim=1)
             content = torch.concat([denoising_logits, content], dim=1)
         
-        print(f"[DEBUG] Memory shape: {memory.shape}")  
-        if self.training or self.eval_spatial_size is None:  
-            anchors, valid_mask = self._generate_anchors(spatial_shapes, device=memory.device)  
-        else:  
-            anchors = self.anchors  
-            valid_mask = self.valid_mask  
-        print(f"[DEBUG] Valid mask shape: {valid_mask.shape}")
-        if valid_mask.shape[1] != memory.shape[1]:  
-            print(f"[DEBUG] Resizing valid_mask from {valid_mask.shape} to match memory shape {memory.shape}")  
-            # Option 1: Create a new valid_mask with the correct size  
-            new_valid_mask = torch.zeros((1, memory.shape[1], 1), device=memory.device, dtype=valid_mask.dtype)  
-            # Copy as much of the original mask as possible  
-            min_size = min(valid_mask.shape[1], memory.shape[1])  
-            new_valid_mask[0, :min_size, 0] = valid_mask[0, :min_size, 0]  
-            valid_mask = new_valid_mask
+
+
 
         return content, enc_topk_bbox_unact, enc_topk_bboxes_list, enc_topk_logits_list
 
