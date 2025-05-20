@@ -54,7 +54,7 @@ class HybridHSFPNEncoder(nn.Module):
     __share__ = ['eval_spatial_size', ]  
       
     def __init__(self,  
-                 in_channels=[512, 1024, 2048],  
+                 in_channels=[256, 512, 1024],  
                  feat_strides=[8, 16, 32],  
                  hidden_dim=384,  
                  nhead=8,  

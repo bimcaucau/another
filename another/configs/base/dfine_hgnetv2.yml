@@ -42,7 +42,7 @@ HGNetv2:
 #   depth_mult: 1
 #   act: 'silu'
 HybridHSFPNEncoder:  # Add this section  
-  in_channels: [512, 1024, 2048]  
+  in_channels: [256, 512, 1024]
   feat_strides: [8, 16, 32]  
   hidden_dim: 384  
   dim_feedforward: 2048  
