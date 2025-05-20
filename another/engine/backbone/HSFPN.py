@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from ..core import register
 
-@register()
+
 class HFP(nn.Module):
     def __init__(self, channels, alpha=0.25, pool_size=16):
         super().__init__()
@@ -39,7 +39,6 @@ class HFP(nn.Module):
         out = self.conv_out(out)
         return out
 
-@register()
 class SDP(nn.Module):
     def __init__(self, channels, patch_size):
         super().__init__()
@@ -72,7 +71,7 @@ class SDP(nn.Module):
         attended = F.fold(attended, output_size=(H, W), kernel_size=self.patch_size, stride=self.patch_size)
         return lower_feat + attended
 
-@register()
+
 class HSFPN(nn.Module):
     def __init__(self, in_channels_list, out_channels, use_sdp=True, patch_size=(4, 4)):
         super().__init__()
