@@ -764,7 +764,9 @@ class DFINETransformer(nn.Module):
                     )
         else:
             denoising_logits, denoising_bbox_unact, attn_mask, dn_meta = None, None, None, None
-
+        if attn_mask is not None and attn_mask.shape[0] != self.num_queries:  
+            print(f"Resetting attention mask due to size mismatch: {attn_mask.shape}")  
+            attn_mask = None
         init_ref_contents, init_ref_points_unact, enc_topk_bboxes_list, enc_topk_logits_list = \
             self._get_decoder_input(memory, spatial_shapes, denoising_logits, denoising_bbox_unact)
 
