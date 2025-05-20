@@ -611,7 +611,7 @@ class DFINETransformer(nn.Module):
             eval_h, eval_w = self.eval_spatial_size
             for s in self.feat_strides:
                 spatial_shapes.append([int(eval_h / s), int(eval_w / s)])
-
+        print(f"[DEBUG] Generating anchors with spatial shapes: {spatial_shapes}")  
         anchors = []
         for lvl, (h, w) in enumerate(spatial_shapes):
             grid_y, grid_x = torch.meshgrid(torch.arange(h), torch.arange(w), indexing='ij')
@@ -677,10 +677,21 @@ class DFINETransformer(nn.Module):
             enc_topk_bbox_unact = torch.concat([denoising_bbox_unact, enc_topk_bbox_unact], dim=1)
             content = torch.concat([denoising_logits, content], dim=1)
         
+        print(f"[DEBUG] Memory shape: {memory.shape}")  
         if self.training or self.eval_spatial_size is None:  
-            # Print the spatial shapes to debug  
-            print(f"[DEBUG] Spatial shapes for anchor generation: {spatial_shapes}")  
-            anchors, valid_mask = self._generate_anchors(spatial_shapes, device=memory.device)
+            anchors, valid_mask = self._generate_anchors(spatial_shapes, device=memory.device)  
+        else:  
+            anchors = self.anchors  
+            valid_mask = self.valid_mask  
+        print(f"[DEBUG] Valid mask shape: {valid_mask.shape}")
+        if valid_mask.shape[1] != memory.shape[1]:  
+            print(f"[DEBUG] Resizing valid_mask from {valid_mask.shape} to match memory shape {memory.shape}")  
+            # Option 1: Create a new valid_mask with the correct size  
+            new_valid_mask = torch.zeros((1, memory.shape[1], 1), device=memory.device, dtype=valid_mask.dtype)  
+            # Copy as much of the original mask as possible  
+            min_size = min(valid_mask.shape[1], memory.shape[1])  
+            new_valid_mask[0, :min_size, 0] = valid_mask[0, :min_size, 0]  
+            valid_mask = new_valid_mask
 
         return content, enc_topk_bbox_unact, enc_topk_bboxes_list, enc_topk_logits_list
 
