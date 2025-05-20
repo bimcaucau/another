@@ -238,8 +238,11 @@ class TransformerEncoderLayer(nn.Module):
         self.activation = get_activation(activation)
 
     @staticmethod
-    def with_pos_embed(tensor, pos_embed):
+    def with_pos_embed(tensor, pos_embed):  
+        print(f"[DEBUG] Tensor shape: {tensor.shape}, Pos embed shape: {pos_embed.shape if pos_embed is not None else None}")  
         return tensor if pos_embed is None else tensor + pos_embed
+    # def with_pos_embed(tensor, pos_embed):
+    #     return tensor if pos_embed is None else tensor + pos_embed
 
     def forward(self, src, src_mask=None, pos_embed=None) -> torch.Tensor:
         residual = src
