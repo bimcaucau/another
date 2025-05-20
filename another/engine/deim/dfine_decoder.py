@@ -787,15 +787,41 @@ class DFINETransformer(nn.Module):
             dn_meta=dn_meta)
 
         if self.training and dn_meta is not None:
+            total_size = pre_logits.shape[1]
+            expected_size = sum(dn_meta['dn_num_split'])
+            if total_size != expected_size:
+                print(f"Warning: pre_logits size {total_size} doesn't match expected size {expected_size}")  
+                # Either adjust the split sizes or skip the splitting  
+                if attn_mask is None:  
+                    # If we've disabled the attention mask, skip denoising entirely  
+                    dn_pre_logits = None  
+                else:  
+                    # Adjust split sizes to match tensor size  
+                    dn_size = min(dn_meta['dn_num_split'][0], total_size // 3)  
+                    regular_size = total_size - dn_size  
+                    dn_meta['dn_num_split'] = [dn_size, regular_size]  
+                    dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)  
+
+            else:
+                dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)  
+                dn_pre_bboxes, pre_bboxes = torch.split(pre_bboxes, dn_meta['dn_num_split'], dim=1)  
+                
+                dn_out_logits, out_logits = torch.split(out_logits, dn_meta['dn_num_split'], dim=2)  
+                dn_out_bboxes, out_bboxes = torch.split(out_bboxes, dn_meta['dn_num_split'], dim=2)  
+                
+                dn_out_corners, out_corners = torch.split(out_corners, dn_meta['dn_num_split'], dim=2)  
+                dn_out_refs, out_refs = torch.split(out_refs, dn_meta['dn_num_split'], dim=2)   
+        else:
+            dn_pre_logits = None
             # the output from the first decoder layer, only one
-            dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)
-            dn_pre_bboxes, pre_bboxes = torch.split(pre_bboxes, dn_meta['dn_num_split'], dim=1)
+            # dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)
+            # dn_pre_bboxes, pre_bboxes = torch.split(pre_bboxes, dn_meta['dn_num_split'], dim=1)
 
-            dn_out_logits, out_logits = torch.split(out_logits, dn_meta['dn_num_split'], dim=2)
-            dn_out_bboxes, out_bboxes = torch.split(out_bboxes, dn_meta['dn_num_split'], dim=2)
+            # dn_out_logits, out_logits = torch.split(out_logits, dn_meta['dn_num_split'], dim=2)
+            # dn_out_bboxes, out_bboxes = torch.split(out_bboxes, dn_meta['dn_num_split'], dim=2)
 
-            dn_out_corners, out_corners = torch.split(out_corners, dn_meta['dn_num_split'], dim=2)
-            dn_out_refs, out_refs = torch.split(out_refs, dn_meta['dn_num_split'], dim=2)
+            # dn_out_corners, out_corners = torch.split(out_corners, dn_meta['dn_num_split'], dim=2)
+            # dn_out_refs, out_refs = torch.split(out_refs, dn_meta['dn_num_split'], dim=2)
 
 
         if self.training:
