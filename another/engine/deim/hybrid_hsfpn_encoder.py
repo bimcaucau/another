@@ -227,7 +227,6 @@ class HybridHSFPNEncoder(nn.Module):
         out_w = grid_w.flatten()[..., None] @ omega[None]  
         out_h = grid_h.flatten()[..., None] @ omega[None]  
     
-        # Ensure the output has the correct shape for transformer input  
+        # Ensure the output has the correct shape for transformer input [h*w, 1, embed_dim]  
         pos_emb = torch.concat([out_w.sin(), out_w.cos(), out_h.sin(), out_h.cos()], dim=1)  
-        # Reshape to [h*w, 1, embed_dim] to match the expected shape  
-        return pos_emb.reshape(h*w, 1, embed_dim)
+        return pos_emb.reshape(h*w, 1, embed_dim)  # Shape: [h*w, 1, embed_dim]
