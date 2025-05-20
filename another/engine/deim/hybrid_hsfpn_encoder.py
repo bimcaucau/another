@@ -167,7 +167,7 @@ class HybridHSFPNEncoder(nn.Module):
                 pos_embed = pos_embed.flatten(2).permute(2, 0, 1)  # HW, B, C  
                   
                 # Apply transformer  
-                memory = self.encoder[i](src, pos=pos_embed)  
+                memory = self.encoder[i](src, pos_embed=pos_embed)  
                   
                 # Reshape back  
                 memory = memory.permute(1, 2, 0).reshape(proj_feats[idx].shape)  
