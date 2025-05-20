@@ -646,8 +646,9 @@ class DFINETransformer(nn.Module):
 
         # memory = torch.where(valid_mask, memory, 0)
         # TODO fix type error for onnx export
+        
         memory = valid_mask.to(memory.dtype) * memory
-
+        print(f"[DEBUG] Memory shape: {memory.shape}, Valid mask shape: {valid_mask.shape}")
         output_memory :torch.Tensor = self.enc_output(memory)
         enc_outputs_logits :torch.Tensor = self.enc_score_head(output_memory)
 
@@ -675,6 +676,11 @@ class DFINETransformer(nn.Module):
         if denoising_bbox_unact is not None:
             enc_topk_bbox_unact = torch.concat([denoising_bbox_unact, enc_topk_bbox_unact], dim=1)
             content = torch.concat([denoising_logits, content], dim=1)
+        
+        if self.training or self.eval_spatial_size is None:  
+            # Print the spatial shapes to debug  
+            print(f"[DEBUG] Spatial shapes for anchor generation: {spatial_shapes}")  
+            anchors, valid_mask = self._generate_anchors(spatial_shapes, device=memory.device)
 
         return content, enc_topk_bbox_unact, enc_topk_bboxes_list, enc_topk_logits_list
 
