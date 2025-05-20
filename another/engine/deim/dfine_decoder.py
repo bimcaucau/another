@@ -202,14 +202,14 @@ class TransformerDecoderLayer(nn.Module):
                 spatial_shapes,
                 attn_mask=None,
                 query_pos_embed=None):
+
+        # self attention
+        q = k = self.with_pos_embed(target, query_pos_embed)
         print(f"Target shape: {target.shape}")  
         print(f"Query pos embed shape: {query_pos_embed.shape if query_pos_embed is not None else None}")  
         print(f"Q shape: {q.shape}")  
         print(f"K shape: {k.shape}")  
         print(f"Attn mask shape: {attn_mask.shape if attn_mask is not None else None}")
-
-        # self attention
-        q = k = self.with_pos_embed(target, query_pos_embed)
 
         target2, _ = self.self_attn(q, k, value=target, attn_mask=attn_mask)
         target = target + self.dropout1(target2)
