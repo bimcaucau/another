@@ -27,7 +27,7 @@ class C3(nn.Module):
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), dim=1))
 
-@register()
+
 class HSFPN_CSPPAN(nn.Module):
     def __init__(self, in_channels=[256, 512, 1024], out_channels=256, depth=1, use_sdp=True, mode='hsfpn'):
         super().__init__()
