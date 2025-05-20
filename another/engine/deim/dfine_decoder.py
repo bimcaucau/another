@@ -662,19 +662,8 @@ class DFINETransformer(nn.Module):
 
         memory = valid_mask.to(memory.dtype) * memory
         print(f"[DEBUG] Memory shape: {memory.shape}, Valid mask shape: {valid_mask.shape}")
-        if memory.shape[2] != 256:  # If the hidden dimension doesn't match what enc_output expects  
-            print(f"[DEBUG] Adapting memory dimension from {memory.shape[2]} to 256")  
-            # Create a dimension adaptation layer  
-            dim_adapter = nn.Linear(memory.shape[2], 256).to(memory.device)  
-            # Initialize it with identity-like weights to minimize information loss  
-            with torch.no_grad():  
-                dim_adapter.weight.data.zero_()  
-                for i in range(min(memory.shape[2], 256)):  
-                    dim_adapter.weight.data[i, i] = 1.0  
-            # Apply the dimension adaptation  
-            memory = dim_adapter(memory)  
         
-        output_memory :torch.Tensor = self.enc_output(memory)
+        output_memory :torch.Tensor = memory
         enc_outputs_logits :torch.Tensor = self.enc_score_head(output_memory)
 
         enc_topk_bboxes_list, enc_topk_logits_list = [], []
