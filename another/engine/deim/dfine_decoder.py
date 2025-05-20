@@ -484,11 +484,14 @@ class DFINETransformer(nn.Module):
         #     layer = TransformerEncoderLayer(hidden_dim, nhead, dim_feedforward, activation='gelu')
         #     self.encoder = TransformerEncoder(layer, 1)
 
-        self.enc_output = nn.Sequential(OrderedDict([
-            ('proj', nn.Linear(hidden_dim, hidden_dim)),
-            ('norm', nn.LayerNorm(hidden_dim,)),
+        # self.enc_output = nn.Sequential(OrderedDict([
+        #     ('proj', nn.Linear(hidden_dim, hidden_dim)),
+        #     ('norm', nn.LayerNorm(hidden_dim,)),
+        # ]))
+        self.enc_output = nn.Sequential(OrderedDict([  
+            ('proj', nn.Linear(hidden_dim, hidden_dim)),  
+            ('norm', nn.LayerNorm(hidden_dim,)),  
         ]))
-
         if query_select_method == 'agnostic':
             self.enc_score_head = nn.Linear(hidden_dim, 1)
         else:
@@ -656,7 +659,7 @@ class DFINETransformer(nn.Module):
             min_size = min(valid_mask.shape[1], memory.shape[1])  
             new_valid_mask[0, :min_size, 0] = valid_mask[0, :min_size, 0]  
             valid_mask = new_valid_mask  
-        
+
         memory = valid_mask.to(memory.dtype) * memory
         print(f"[DEBUG] Memory shape: {memory.shape}, Valid mask shape: {valid_mask.shape}")
         output_memory :torch.Tensor = self.enc_output(memory)
