@@ -41,7 +41,13 @@ class CocoDetection(torchvision.datasets.CocoDetection, DetDataset):
     def __getitem__(self, idx):
         img, target = self.load_item(idx)
         if self._transforms is not None:
-            img, target, _ = self._transforms(img, target, self)
+            print(f"Applying transforms to image {target['image_id']}")  
+            try:  
+                img, target, _ = self._transforms(img, target, self)  
+            except Exception as e:  
+                print(f"Error in transforms for image {target['image_id']}: {e}")  
+                raise            
+            #img, target, _ = self._transforms(img, target, self)
         return img, target
 
     def load_item(self, idx):
