@@ -1,3 +1,13 @@
+# import copy
+# from collections import OrderedDict
+
+# import torch
+# import torch.nn as nn
+# import torch.nn.functional as F
+
+from .HSFPN import HSFPN
+#from ..core import register
+
 import copy
 from collections import OrderedDict
 
@@ -5,8 +15,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .HSFPN import HSFPN
-from ..core import register
+from ...core import register
+from .utils import get_activation
 
 __all__ = ['HybridHSFPNEncoder']
 
