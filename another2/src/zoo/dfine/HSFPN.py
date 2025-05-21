@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from ..core import register
+from ...core import register
 import math
 
 @register()
