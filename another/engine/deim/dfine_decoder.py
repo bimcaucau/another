@@ -735,7 +735,8 @@ class DFINETransformer(nn.Module):
             _, topk_ind = torch.topk(outputs_logits.squeeze(-1), topk, dim=-1)
 
         topk_ind: torch.Tensor
-
+        topk_ind = torch.clamp(topk_ind, 0, outputs_anchors_unact.shape[1]-1)  
+        
         topk_anchors = outputs_anchors_unact.gather(dim=1, \
             index=topk_ind.unsqueeze(-1).repeat(1, 1, outputs_anchors_unact.shape[-1]))
 
