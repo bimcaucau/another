@@ -796,11 +796,17 @@ class DFINETransformer(nn.Module):
                     # If we've disabled the attention mask, skip denoising entirely  
                     dn_pre_logits = None  
                 else:  
-                    # Adjust split sizes to match tensor size  
-                    dn_size = min(dn_meta['dn_num_split'][0], total_size // 3)  
-                    regular_size = total_size - dn_size  
-                    dn_meta['dn_num_split'] = [dn_size, regular_size]  
-                    dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)  
+                    # Maintain original proportions when adjusting split sizes  
+                    original_dn = dn_meta['dn_num_split'][0]  
+                    original_reg = dn_meta['dn_num_split'][1]  
+                    original_total = original_dn + original_reg  
+                    ratio_dn = original_dn / original_total  
+                    
+                    # Apply the same ratio to the new total size  
+                    new_dn_size = int(total_size * ratio_dn)  
+                    new_regular_size = total_size - new_dn_size  
+                    dn_meta['dn_num_split'] = [new_dn_size, new_regular_size]  
+                    dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)
 
             else:
                 dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)  
