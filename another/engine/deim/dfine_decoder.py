@@ -793,6 +793,7 @@ class DFINETransformer(nn.Module):
                 print(f"Warning: pre_logits size {total_size} doesn't match expected size {expected_size}")  
                 # Either adjust the split sizes or skip the splitting  
                 if attn_mask is None:  
+                    print("333")
                     # If we've disabled the attention mask, skip denoising entirely  
                     dn_pre_logits = None  
                 else:  
@@ -807,7 +808,7 @@ class DFINETransformer(nn.Module):
                     new_regular_size = total_size - new_dn_size  
                     dn_meta['dn_num_split'] = [new_dn_size, new_regular_size]  
                     dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)
-
+                    print("111")
             else:
                 dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)  
                 dn_pre_bboxes, pre_bboxes = torch.split(pre_bboxes, dn_meta['dn_num_split'], dim=1)  
