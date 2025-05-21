@@ -18,6 +18,7 @@ from engine.solver import TASKS
 
 debug=True
 
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 if debug:
     import torch
     def custom_repr(self):
