@@ -107,5 +107,13 @@ def get_contrastive_denoising_training_group(targets,
     # print(input_query_class.shape) # torch.Size([4, 196, 256])
     # print(input_query_bbox.shape) # torch.Size([4, 196, 4])
     # print(attn_mask.shape) # torch.Size([496, 496])
-
+    # Ensure consistent attention mask size  
+    expected_size = 500  # Fixed size that matches your model's expectation  
+    if attn_mask is not None and attn_mask.shape[0] != expected_size:  
+        new_attn_mask = torch.full([expected_size, expected_size], False, dtype=torch.bool, device=device)  
+        h, w = attn_mask.shape  
+        # Copy the original mask into the new one (preserving the original mask pattern)  
+        new_attn_mask[:h, :w] = attn_mask  
+        attn_mask = new_attn_mask  
+        print(f"Resized attention mask from {h}x{w} to {expected_size}x{expected_size}")
     return input_query_logits, input_query_bbox_unact, attn_mask, dn_meta
