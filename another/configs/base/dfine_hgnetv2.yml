@@ -55,10 +55,6 @@ HybridHSFPNEncoder:
   dropout: 0.
   enc_act: 'gelu'
 
-  # optional
-  pe_temperature: 10000
-  eval_spatial_size: null  # or [H, W] during inference if needed
-
   # HS-FPN specific
   use_hsfpn: true
 
