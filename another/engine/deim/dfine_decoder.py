@@ -637,91 +637,91 @@ class DFINETransformer(nn.Module):
         return anchors, valid_mask
 
 
-    # def _get_decoder_input(self,
-    #                        memory: torch.Tensor,
-    #                        spatial_shapes,
-    #                        denoising_logits=None,
-    #                        denoising_bbox_unact=None):
+    def _get_decoder_input(self,
+                           memory: torch.Tensor,
+                           spatial_shapes,
+                           denoising_logits=None,
+                           denoising_bbox_unact=None):
 
-    #     # prepare input for decoder
-    #     if self.training or self.eval_spatial_size is None:
-    #         anchors, valid_mask = self._generate_anchors(spatial_shapes, device=memory.device)
-    #     else:
-    #         anchors = self.anchors
-    #         valid_mask = self.valid_mask
+        # prepare input for decoder
+        if self.training or self.eval_spatial_size is None:
+            anchors, valid_mask = self._generate_anchors(spatial_shapes, device=memory.device)
+        else:
+            anchors = self.anchors
+            valid_mask = self.valid_mask
 
-    #     print(f"[DEBUG] Valid mask shape: {valid_mask.shape}")  
-    #     if memory.shape[0] > 1:
-    #         anchors = anchors.repeat(memory.shape[0], 1, 1)
+        print(f"[DEBUG] Valid mask shape: {valid_mask.shape}")  
+        if memory.shape[0] > 1:
+            anchors = anchors.repeat(memory.shape[0], 1, 1)
 
-    #     # memory = torch.where(valid_mask, memory, 0)
-    #     # TODO fix type error for onnx export
-    #     if valid_mask.shape[1] != memory.shape[1]:  
-    #         print(f"[DEBUG] Resizing valid_mask from {valid_mask.shape} to match memory shape {memory.shape}")  
-    #         # Create a new valid_mask with the correct size  
-    #         new_valid_mask = torch.ones((1, memory.shape[1], 1), device=memory.device, dtype=valid_mask.dtype)  
-    #         # Copy as much of the original mask as possible  
-    #         min_size = min(valid_mask.shape[1], memory.shape[1])  
-    #         new_valid_mask[0, :min_size, 0] = valid_mask[0, :min_size, 0]  
-    #         valid_mask = new_valid_mask  
+        # memory = torch.where(valid_mask, memory, 0)
+        # TODO fix type error for onnx export
+        if valid_mask.shape[1] != memory.shape[1]:  
+            print(f"[DEBUG] Resizing valid_mask from {valid_mask.shape} to match memory shape {memory.shape}")  
+            # Create a new valid_mask with the correct size  
+            new_valid_mask = torch.ones((1, memory.shape[1], 1), device=memory.device, dtype=valid_mask.dtype)  
+            # Copy as much of the original mask as possible  
+            min_size = min(valid_mask.shape[1], memory.shape[1])  
+            new_valid_mask[0, :min_size, 0] = valid_mask[0, :min_size, 0]  
+            valid_mask = new_valid_mask  
 
-    #     memory = valid_mask.to(memory.dtype) * memory
-    #     print(f"[DEBUG] Memory shape: {memory.shape}, Valid mask shape: {valid_mask.shape}")
+        memory = valid_mask.to(memory.dtype) * memory
+        print(f"[DEBUG] Memory shape: {memory.shape}, Valid mask shape: {valid_mask.shape}")
         
-    #     output_memory :torch.Tensor = self.enc_output(memory)
-    #     enc_outputs_logits :torch.Tensor = self.enc_score_head(output_memory)
+        output_memory :torch.Tensor = self.enc_output(memory)
+        enc_outputs_logits :torch.Tensor = self.enc_score_head(output_memory)
 
-    #     enc_topk_bboxes_list, enc_topk_logits_list = [], []
-    #     enc_topk_memory, enc_topk_logits, enc_topk_anchors = \
-    #         self._select_topk(output_memory, enc_outputs_logits, anchors, self.num_queries)
+        enc_topk_bboxes_list, enc_topk_logits_list = [], []
+        enc_topk_memory, enc_topk_logits, enc_topk_anchors = \
+            self._select_topk(output_memory, enc_outputs_logits, anchors, self.num_queries)
 
-    #     enc_topk_bbox_unact :torch.Tensor = self.enc_bbox_head(enc_topk_memory) + enc_topk_anchors
+        enc_topk_bbox_unact :torch.Tensor = self.enc_bbox_head(enc_topk_memory) + enc_topk_anchors
 
-    #     if self.training:
-    #         enc_topk_bboxes = F.sigmoid(enc_topk_bbox_unact)
-    #         enc_topk_bboxes_list.append(enc_topk_bboxes)
-    #         enc_topk_logits_list.append(enc_topk_logits)
+        if self.training:
+            enc_topk_bboxes = F.sigmoid(enc_topk_bbox_unact)
+            enc_topk_bboxes_list.append(enc_topk_bboxes)
+            enc_topk_logits_list.append(enc_topk_logits)
 
-    #     # if self.num_select_queries != self.num_queries:
-    #     #     raise NotImplementedError('')
+        # if self.num_select_queries != self.num_queries:
+        #     raise NotImplementedError('')
 
-    #     if self.learn_query_content:
-    #         content = self.tgt_embed.weight.unsqueeze(0).tile([memory.shape[0], 1, 1])
-    #     else:
-    #         content = enc_topk_memory.detach()
+        if self.learn_query_content:
+            content = self.tgt_embed.weight.unsqueeze(0).tile([memory.shape[0], 1, 1])
+        else:
+            content = enc_topk_memory.detach()
 
-    #     enc_topk_bbox_unact = enc_topk_bbox_unact.detach()
+        enc_topk_bbox_unact = enc_topk_bbox_unact.detach()
 
-    #     if denoising_bbox_unact is not None:
-    #         enc_topk_bbox_unact = torch.concat([denoising_bbox_unact, enc_topk_bbox_unact], dim=1)
-    #         content = torch.concat([denoising_logits, content], dim=1)
+        if denoising_bbox_unact is not None:
+            enc_topk_bbox_unact = torch.concat([denoising_bbox_unact, enc_topk_bbox_unact], dim=1)
+            content = torch.concat([denoising_logits, content], dim=1)
         
 
 
 
-    #     return content, enc_topk_bbox_unact, enc_topk_bboxes_list, enc_topk_logits_list
-    def _get_decoder_input(self,  
-                        memory: torch.Tensor,  
-                        spatial_shapes,  
-                        denoising_logits=None,  
-                        denoising_bbox_unact=None):  
-        
-        print("[DEBUG] Bypassing _get_decoder_input for profiling")  
-        
-        # Create dummy outputs with the expected shapes  
-        batch_size = memory.shape[0]  
-        num_queries = self.num_queries  
-        hidden_dim = memory.shape[2]  
-        
-        # Create dummy content and bbox tensors  
-        content = torch.zeros((batch_size, num_queries, hidden_dim), device=memory.device)  
-        enc_topk_bbox_unact = torch.zeros((batch_size, num_queries, 4), device=memory.device)  
-        
-        # Create empty lists for the other outputs  
-        enc_topk_bboxes_list = []  
-        enc_topk_logits_list = []  
-        
         return content, enc_topk_bbox_unact, enc_topk_bboxes_list, enc_topk_logits_list
+    # def _get_decoder_input(self,  
+    #                     memory: torch.Tensor,  
+    #                     spatial_shapes,  
+    #                     denoising_logits=None,  
+    #                     denoising_bbox_unact=None):  
+        
+    #     print("[DEBUG] Bypassing _get_decoder_input for profiling")  
+        
+    #     # Create dummy outputs with the expected shapes  
+    #     batch_size = memory.shape[0]  
+    #     num_queries = self.num_queries  
+    #     hidden_dim = memory.shape[2]  
+        
+    #     # Create dummy content and bbox tensors  
+    #     content = torch.zeros((batch_size, num_queries, hidden_dim), device=memory.device)  
+    #     enc_topk_bbox_unact = torch.zeros((batch_size, num_queries, 4), device=memory.device)  
+        
+    #     # Create empty lists for the other outputs  
+    #     enc_topk_bboxes_list = []  
+    #     enc_topk_logits_list = []  
+        
+    #     return content, enc_topk_bbox_unact, enc_topk_bboxes_list, enc_topk_logits_list
 
     def _select_topk(self, memory: torch.Tensor, outputs_logits: torch.Tensor, outputs_anchors_unact: torch.Tensor, topk: int):
         if self.query_select_method == 'default':
