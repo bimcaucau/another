@@ -6,8 +6,6 @@ Copyright(c) 2023 lyuwenyu. All Rights Reserved.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .HSFPN import HFP, SDP
-
 
 import math
 import warnings
@@ -116,98 +114,53 @@ class CSPDarkNet(nn.Module):
         return [outputs[i] for i in self.return_idx]
 
 
-#@register()
-# class CSPPAN(nn.Module):
-#     """
-#     P5 ---> 1x1  ---------------------------------> concat --> c3 --> det
-#              | up                                     | conv /2
-#     P4 ---> concat ---> c3 ---> 1x1  -->  concat ---> c3 -----------> det
-#                                  | up       | conv /2
-#     P3 -----------------------> concat ---> c3 ---------------------> det
-#     """
-#     __share__ = ['depth_multi', ]
-
-#     def __init__(self, in_channels=[256, 512, 1024], depth_multi=1., act='silu') -> None:
-#         super().__init__()
-#         depth = max(round(3 * depth_multi), 1)
-
-#         self.out_channels = in_channels
-#         self.fpn_stems = nn.ModuleList([Conv(cin, cout, 1, 1, act=act) for cin, cout in zip(in_channels[::-1], in_channels[::-1][1:])])
-#         self.fpn_csps = nn.ModuleList([C3(cin, cout, depth, False, act=act) for cin, cout in zip(in_channels[::-1], in_channels[::-1][1:])])
-
-#         self.pan_stems = nn.ModuleList([Conv(c, c, 3, 2, act=act) for c in in_channels[:-1]])
-#         self.pan_csps = nn.ModuleList([C3(c, c, depth, False, act=act) for c in in_channels[1:]])
-
-#     def forward(self, feats):
-#         fpn_feats = []
-#         for i, feat in enumerate(feats[::-1]):
-#             if i == 0:
-#                 feat = self.fpn_stems[i](feat)
-#                 fpn_feats.append(feat)
-#             else:
-#                 _feat = F.interpolate(fpn_feats[-1], scale_factor=2, mode='nearest')
-#                 feat = torch.concat([_feat, feat], dim=1)
-#                 feat = self.fpn_csps[i-1](feat)
-#                 if i < len(self.fpn_stems):
-#                     feat = self.fpn_stems[i](feat)
-#                 fpn_feats.append(feat)
-
-#         pan_feats = []
-#         for i, feat in enumerate(fpn_feats[::-1]):
-#             if i == 0:
-#                 pan_feats.append(feat)
-#             else:
-#                 _feat = self.pan_stems[i-1](pan_feats[-1])
-#                 feat = torch.concat([_feat, feat], dim=1)
-#                 feat = self.pan_csps[i-1](feat)
-#                 pan_feats.append(feat)
-
-#         return pan_feats
 @register()
-class HSFPN_CSPPAN(nn.Module):
-    def __init__(self, in_channels=[256, 512, 1024], out_channels=256, depth=1, use_sdp=True, mode='both', act='silu'):
-        super().__init__()  
-        self.mode = mode  
-        self.use_sdp = use_sdp and mode in ['hsfpn', 'both']  
-          
-        # Store in_channels as an instance variable  
-        self.in_channels = in_channels  
-  
-        # FPN: top-down  
-        self.fpn_stems = nn.ModuleList([Conv(c, out_channels, 1, act=act) for c in in_channels[::-1]])  
-        self.fpn_hfps = nn.ModuleList([HFP(out_channels) for _ in in_channels[::-1]]) if mode in ['hsfpn', 'both'] else None  
-        self.fpn_csps = nn.ModuleList([C3(out_channels * 2, out_channels, n=depth, act=act) for _ in in_channels[::-1][1:]])  
-  
-        # PAN: bottom-up  
-        self.pan_stems = nn.ModuleList([Conv(out_channels, out_channels, 3, 2, act=act) for _ in in_channels[:-1]])  
-        self.pan_sdps = nn.ModuleList([SDP(out_channels, patch_size=(4, 4)) for _ in in_channels[1:]]) if self.use_sdp else None  
-        self.pan_csps = nn.ModuleList([C3(out_channels * 2, out_channels, n=depth, act=act) for _ in in_channels[1:]])  
-          
-        # Store out_channels as an instance variable  
-        self.out_channels = [out_channels] * len(in_channels)
+class CSPPAN(nn.Module):
+    """
+    P5 ---> 1x1  ---------------------------------> concat --> c3 --> det
+             | up                                     | conv /2
+    P4 ---> concat ---> c3 ---> 1x1  -->  concat ---> c3 -----------> det
+                                 | up       | conv /2
+    P3 -----------------------> concat ---> c3 ---------------------> det
+    """
+    __share__ = ['depth_multi', ]
+
+    def __init__(self, in_channels=[256, 512, 1024], depth_multi=1., act='silu') -> None:
+        super().__init__()
+        depth = max(round(3 * depth_multi), 1)
+
+        self.out_channels = in_channels
+        self.fpn_stems = nn.ModuleList([Conv(cin, cout, 1, 1, act=act) for cin, cout in zip(in_channels[::-1], in_channels[::-1][1:])])
+        self.fpn_csps = nn.ModuleList([C3(cin, cout, depth, False, act=act) for cin, cout in zip(in_channels[::-1], in_channels[::-1][1:])])
+
+        self.pan_stems = nn.ModuleList([Conv(c, c, 3, 2, act=act) for c in in_channels[:-1]])
+        self.pan_csps = nn.ModuleList([C3(c, c, depth, False, act=act) for c in in_channels[1:]])
+
     def forward(self, feats):
-        feats = feats[::-1]  # P5 -> P3
         fpn_feats = []
+        for i, feat in enumerate(feats[::-1]):
+            if i == 0:
+                feat = self.fpn_stems[i](feat)
+                fpn_feats.append(feat)
+            else:
+                _feat = F.interpolate(fpn_feats[-1], scale_factor=2, mode='nearest')
+                feat = torch.concat([_feat, feat], dim=1)
+                feat = self.fpn_csps[i-1](feat)
+                if i < len(self.fpn_stems):
+                    feat = self.fpn_stems[i](feat)
+                fpn_feats.append(feat)
 
-        for i, x in enumerate(feats):
-            x = self.fpn_stems[i](x)
-            if self.mode in ['hsfpn', 'both']:
-                x = self.fpn_hfps[i](x)
-            if i > 0:
-                x = torch.cat([x, F.interpolate(fpn_feats[-1], size=x.shape[-2:], mode='nearest')], dim=1)
-                x = self.fpn_csps[i - 1](x)
-            fpn_feats.append(x)
+        pan_feats = []
+        for i, feat in enumerate(fpn_feats[::-1]):
+            if i == 0:
+                pan_feats.append(feat)
+            else:
+                _feat = self.pan_stems[i-1](pan_feats[-1])
+                feat = torch.concat([_feat, feat], dim=1)
+                feat = self.pan_csps[i-1](feat)
+                pan_feats.append(feat)
 
-        pan_feats = [fpn_feats[-1]]
-        for i in range(len(fpn_feats) - 1):
-            down = self.pan_stems[i](pan_feats[-1])
-            if self.use_sdp:
-                down = self.pan_sdps[i](down, fpn_feats[-2 - i])
-            x = torch.cat([down, fpn_feats[-2 - i]], dim=1)
-            x = self.pan_csps[i](x)
-            pan_feats.append(x)
-
-        return pan_feats[::-1]  # restore order P3 -> P5
+        return pan_feats
 
 
 if __name__ == '__main__':
@@ -221,7 +174,6 @@ if __name__ == '__main__':
     outputs = m(data)
     print([o.shape for o in outputs])
 
-    m = HSFPN_CSPPAN(in_channels=m.out_channels, depth_multi=depth_multi, act='silu')
+    m = CSPPAN(in_channels=m.out_channels, depth_multi=depth_multi, act='silu')
     outputs = m(outputs)
     print([o.shape for o in outputs])
-    print(m)

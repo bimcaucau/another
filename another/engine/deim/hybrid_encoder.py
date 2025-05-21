@@ -238,22 +238,7 @@ class TransformerEncoderLayer(nn.Module):
         self.activation = get_activation(activation)
 
     @staticmethod
-    def with_pos_embed(tensor, pos_embed):  
-    #     print(f"[DEBUG] Tensor shape: {tensor.shape}, Pos embed shape: {pos_embed.shape if pos_embed is not None else None}")  
-    #     return tensor if pos_embed is None else tensor + pos_embed
-    # # def with_pos_embed(tensor, pos_embed):
-    # #     return tensor if pos_embed is None else tensor + pos_embed
- 
-        print(f"[DEBUG] Tensor shape: {tensor.shape}, Pos embed shape: {pos_embed.shape if pos_embed is not None else None}")  
-        if pos_embed is not None:  
-            # Transpose pos_embed to match tensor shape  
-            if pos_embed.shape != tensor.shape:  
-                # Try different permutations until we find one that works  
-                if pos_embed.shape[0] == 1 and pos_embed.shape[2] == tensor.shape[0]:  
-                    pos_embed = pos_embed.permute(2, 0, 1)  
-                elif pos_embed.shape[0] == tensor.shape[2] and pos_embed.shape[2] == 1:  
-                    pos_embed = pos_embed.permute(2, 1, 0)  
-                print(f"[DEBUG] After transpose - Tensor shape: {tensor.shape}, Pos embed shape: {pos_embed.shape}")  
+    def with_pos_embed(tensor, pos_embed):
         return tensor if pos_embed is None else tensor + pos_embed
 
     def forward(self, src, src_mask=None, pos_embed=None) -> torch.Tensor:

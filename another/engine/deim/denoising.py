@@ -56,7 +56,7 @@ def get_contrastive_denoising_training_group(targets,
     dn_positive_idx = torch.nonzero(positive_gt_mask)[:, 1]
     dn_positive_idx = torch.split(dn_positive_idx, [n * num_group for n in num_gts])
     # total denoising queries
-    # num_denoising = int(max_gt_num * 2 * num_group)
+    num_denoising = int(max_gt_num * 2 * num_group)
 
     if label_noise_ratio > 0:
         mask = torch.rand_like(input_query_class, dtype=torch.float) < (label_noise_ratio * 0.5)
@@ -81,10 +81,6 @@ def get_contrastive_denoising_training_group(targets,
 
     tgt_size = num_denoising + num_queries
     attn_mask = torch.full([tgt_size, tgt_size], False, dtype=torch.bool, device=device)
-    print(f"num_denoising: {num_denoising}, num_queries: {num_queries}")  
-    print(f"max_gt_num: {max_gt_num}, num_group: {num_group}")  
-    print(f"Recalculated num_denoising: {int(max_gt_num * 2 * num_group)}")  
-    print(f"tgt_size: {tgt_size}, attn_mask shape: {attn_mask.shape}")
     # match query cannot see the reconstruction
     attn_mask[num_denoising:, :num_denoising] = True
 
@@ -107,15 +103,5 @@ def get_contrastive_denoising_training_group(targets,
     # print(input_query_class.shape) # torch.Size([4, 196, 256])
     # print(input_query_bbox.shape) # torch.Size([4, 196, 4])
     # print(attn_mask.shape) # torch.Size([496, 496])
-    # Ensure consistent attention mask size  
-    expected_size = 500  # Fixed size that matches your model's expectation  
-    print("222 below")
-    if attn_mask is not None and attn_mask.shape[0] != expected_size:  
-        print("555")
-        new_attn_mask = torch.full([expected_size, expected_size], False, dtype=torch.bool, device=device)  
-        h, w = attn_mask.shape  
-        # Copy the original mask into the new one (preserving the original mask pattern)  
-        new_attn_mask[:h, :w] = attn_mask  
-        attn_mask = new_attn_mask  
-        print(f"Resized attention mask from {h}x{w} to {expected_size}x{expected_size}")
+
     return input_query_logits, input_query_bbox_unact, attn_mask, dn_meta

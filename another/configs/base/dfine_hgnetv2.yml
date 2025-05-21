@@ -41,19 +41,26 @@ HGNetv2:
 #   expansion: 1.0
 #   depth_mult: 1
 #   act: 'silu'
-HybridHSFPNEncoder:  # Add this section  
-  in_channels: [256, 512, 1024]
-  feat_strides: [8, 16, 32]  
-  hidden_dim: 384  
-  dim_feedforward: 2048  
-  use_encoder_idx: [2]  
-  num_encoder_layers: 1  
-  use_hfp: True  
-  use_sdp: True  
-  csp_depth: 1  
-  mode: 'hsfpn'  
-  act: 'silu'  
+
+HybridHSFPNEncoder:
+  in_channels: [512, 1024, 2048]
+  feat_strides: [8, 16, 32]
+
+  # transformer encoder part (same as HybridEncoder)
+  hidden_dim: 256
+  use_encoder_idx: [2]
+  num_encoder_layers: 1
+  nhead: 8
+  dim_feedforward: 1024
+  dropout: 0.
   enc_act: 'gelu'
+
+  # optional
+  pe_temperature: 10000
+  eval_spatial_size: null  # or [H, W] during inference if needed
+
+  # HS-FPN specific
+  use_hsfpn: true
 
 
 DFINETransformer:
@@ -64,7 +71,7 @@ DFINETransformer:
 
   num_layers: 6
   eval_idx: -1
-  num_queries: 400
+  num_queries: 300
 
   num_denoising: 100
   label_noise_ratio: 0.5
@@ -86,7 +93,7 @@ DFINETransformer:
 
 
 PostProcessor:
-  num_top_queries: 400
+  num_top_queries: 300
 
 
 DEIMCriterion:

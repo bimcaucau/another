@@ -31,9 +31,7 @@ class Compose(T.Compose):
                     transform = getattr(GLOBAL_CONFIG[name]['_pymodule'], GLOBAL_CONFIG[name]['_name'])(**op)
                     transforms.append(transform)
                     op['type'] = name
-                    #print("     ### Transform @{} ###    ".format(type(transform).__name__))
-                    print(f"     ### Transform @{type(transform).__name__} with params {op} ###")
-
+                    print("     ### Transform @{} ###    ".format(type(transform).__name__))
 
                 elif isinstance(op, nn.Module):
                     transforms.append(op)
@@ -99,12 +97,6 @@ class Compose(T.Compose):
                     elif (type(transform).__name__ == 'RandomZoomOut' or type(transform).__name__ == 'RandomIoUCrop') and with_mosaic:      
                         pass
                     else:
-                        print(f"Applying transform: {type(transform).__name__}")  
-                        try:  
-                            sample = transform(sample)  
-                        except Exception as e:  
-                            print(f"Error in transform {type(transform).__name__}: {e}")  
-                            raise                        
                         sample = transform(sample)
         else:   # the default data scheduler
             for transform in self.transforms:

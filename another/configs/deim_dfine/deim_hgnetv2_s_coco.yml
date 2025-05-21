@@ -37,6 +37,3 @@ train_dataloader:
   collate_fn:
     mixup_epochs: [4, 64]
     stop_epoch: 120
-
-
-find_unused_parameters: True

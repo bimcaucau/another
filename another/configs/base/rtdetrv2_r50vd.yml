@@ -59,7 +59,7 @@ RTDETRTransformerv2:
   num_levels: 3
 
   num_layers: 6
-  num_queries: 400
+  num_queries: 300
 
   num_denoising: 100
   label_noise_ratio: 0.5

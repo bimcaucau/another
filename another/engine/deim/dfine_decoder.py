@@ -205,11 +205,6 @@ class TransformerDecoderLayer(nn.Module):
 
         # self attention
         q = k = self.with_pos_embed(target, query_pos_embed)
-        print(f"Target shape: {target.shape}")  
-        print(f"Query pos embed shape: {query_pos_embed.shape if query_pos_embed is not None else None}")  
-        print(f"Q shape: {q.shape}")  
-        print(f"K shape: {k.shape}")  
-        print(f"Attn mask shape: {attn_mask.shape if attn_mask is not None else None}")
 
         target2, _ = self.self_attn(q, k, value=target, attn_mask=attn_mask)
         target = target + self.dropout1(target2)
@@ -409,7 +404,7 @@ class DFINETransformer(nn.Module):
     def __init__(self,
                  num_classes=80,
                  hidden_dim=256,
-                 num_queries=400,
+                 num_queries=300,
                  feat_channels=[512, 1024, 2048],
                  feat_strides=[8, 16, 32],
                  num_levels=3,
@@ -489,14 +484,11 @@ class DFINETransformer(nn.Module):
         #     layer = TransformerEncoderLayer(hidden_dim, nhead, dim_feedforward, activation='gelu')
         #     self.encoder = TransformerEncoder(layer, 1)
 
-        # self.enc_output = nn.Sequential(OrderedDict([
-        #     ('proj', nn.Linear(hidden_dim, hidden_dim)),
-        #     ('norm', nn.LayerNorm(hidden_dim,)),
-        # ]))
-        self.enc_output = nn.Sequential(OrderedDict([  
-            ('proj', nn.Linear(hidden_dim, hidden_dim)),  
-            ('norm', nn.LayerNorm(hidden_dim,)),  
+        self.enc_output = nn.Sequential(OrderedDict([
+            ('proj', nn.Linear(hidden_dim, hidden_dim)),
+            ('norm', nn.LayerNorm(hidden_dim,)),
         ]))
+
         if query_select_method == 'agnostic':
             self.enc_score_head = nn.Linear(hidden_dim, 1)
         else:
@@ -619,7 +611,7 @@ class DFINETransformer(nn.Module):
             eval_h, eval_w = self.eval_spatial_size
             for s in self.feat_strides:
                 spatial_shapes.append([int(eval_h / s), int(eval_w / s)])
-        print(f"[DEBUG] Generating anchors with spatial shapes: {spatial_shapes}")  
+
         anchors = []
         for lvl, (h, w) in enumerate(spatial_shapes):
             grid_y, grid_x = torch.meshgrid(torch.arange(h), torch.arange(w), indexing='ij')
@@ -649,25 +641,13 @@ class DFINETransformer(nn.Module):
         else:
             anchors = self.anchors
             valid_mask = self.valid_mask
-
-        print(f"[DEBUG] Valid mask shape: {valid_mask.shape}")  
         if memory.shape[0] > 1:
             anchors = anchors.repeat(memory.shape[0], 1, 1)
 
         # memory = torch.where(valid_mask, memory, 0)
         # TODO fix type error for onnx export
-        if valid_mask.shape[1] != memory.shape[1]:  
-            print(f"[DEBUG] Resizing valid_mask from {valid_mask.shape} to match memory shape {memory.shape}")  
-            # Create a new valid_mask with the correct size  
-            new_valid_mask = torch.ones((1, memory.shape[1], 1), device=memory.device, dtype=valid_mask.dtype)  
-            # Copy as much of the original mask as possible  
-            min_size = min(valid_mask.shape[1], memory.shape[1])  
-            new_valid_mask[0, :min_size, 0] = valid_mask[0, :min_size, 0]  
-            valid_mask = new_valid_mask  
-
         memory = valid_mask.to(memory.dtype) * memory
-        print(f"[DEBUG] Memory shape: {memory.shape}, Valid mask shape: {valid_mask.shape}")
-        
+
         output_memory :torch.Tensor = self.enc_output(memory)
         enc_outputs_logits :torch.Tensor = self.enc_score_head(output_memory)
 
@@ -695,33 +675,8 @@ class DFINETransformer(nn.Module):
         if denoising_bbox_unact is not None:
             enc_topk_bbox_unact = torch.concat([denoising_bbox_unact, enc_topk_bbox_unact], dim=1)
             content = torch.concat([denoising_logits, content], dim=1)
-        
-
-
 
         return content, enc_topk_bbox_unact, enc_topk_bboxes_list, enc_topk_logits_list
-    # def _get_decoder_input(self,  
-    #                     memory: torch.Tensor,  
-    #                     spatial_shapes,  
-    #                     denoising_logits=None,  
-    #                     denoising_bbox_unact=None):  
-        
-    #     print("[DEBUG] Bypassing _get_decoder_input for profiling")  
-        
-    #     # Create dummy outputs with the expected shapes  
-    #     batch_size = memory.shape[0]  
-    #     num_queries = self.num_queries  
-    #     hidden_dim = memory.shape[2]  
-        
-    #     # Create dummy content and bbox tensors  
-    #     content = torch.zeros((batch_size, num_queries, hidden_dim), device=memory.device)  
-    #     enc_topk_bbox_unact = torch.zeros((batch_size, num_queries, 4), device=memory.device)  
-        
-    #     # Create empty lists for the other outputs  
-    #     enc_topk_bboxes_list = []  
-    #     enc_topk_logits_list = []  
-        
-    #     return content, enc_topk_bbox_unact, enc_topk_bboxes_list, enc_topk_logits_list
 
     def _select_topk(self, memory: torch.Tensor, outputs_logits: torch.Tensor, outputs_anchors_unact: torch.Tensor, topk: int):
         if self.query_select_method == 'default':
@@ -735,8 +690,7 @@ class DFINETransformer(nn.Module):
             _, topk_ind = torch.topk(outputs_logits.squeeze(-1), topk, dim=-1)
 
         topk_ind: torch.Tensor
-        topk_ind = torch.clamp(topk_ind, 0, outputs_anchors_unact.shape[1]-1)  
-        
+
         topk_anchors = outputs_anchors_unact.gather(dim=1, \
             index=topk_ind.unsqueeze(-1).repeat(1, 1, outputs_anchors_unact.shape[-1]))
 
@@ -765,22 +719,11 @@ class DFINETransformer(nn.Module):
                     )
         else:
             denoising_logits, denoising_bbox_unact, attn_mask, dn_meta = None, None, None, None
-        # if attn_mask is not None and attn_mask.shape[0] != self.num_queries:  
-        #     print(f"Resetting attention mask due to size mismatch: {attn_mask.shape}")  
-        #     attn_mask = None
+
         init_ref_contents, init_ref_points_unact, enc_topk_bboxes_list, enc_topk_logits_list = \
             self._get_decoder_input(memory, spatial_shapes, denoising_logits, denoising_bbox_unact)
 
         # decoder
-        # Add this before the decoder call  
-        if attn_mask is not None and attn_mask.shape[0] != init_ref_contents.shape[1]:  
-            print(f"Resizing attention mask from {attn_mask.shape} to match content shape {init_ref_contents.shape[1]}")  
-            new_attn_mask = torch.zeros((init_ref_contents.shape[1], init_ref_contents.shape[1]),   
-                                    dtype=attn_mask.dtype, device=attn_mask.device)  
-            # Keep the original mask pattern for the visible portion  
-            min_size = min(attn_mask.shape[0], init_ref_contents.shape[1])  
-            new_attn_mask[:min_size, :min_size] = attn_mask[:min_size, :min_size]  
-            attn_mask = new_attn_mask
         out_bboxes, out_logits, out_corners, out_refs, pre_bboxes, pre_logits = self.decoder(
             init_ref_contents,
             init_ref_points_unact,
@@ -797,48 +740,15 @@ class DFINETransformer(nn.Module):
             dn_meta=dn_meta)
 
         if self.training and dn_meta is not None:
-            total_size = pre_logits.shape[1]
-            expected_size = sum(dn_meta['dn_num_split'])
-            if total_size != expected_size:
-                print(f"Warning: pre_logits size {total_size} doesn't match expected size {expected_size}")  
-                # Either adjust the split sizes or skip the splitting  
-                if attn_mask is None:  
-                    print("333")
-                    # If we've disabled the attention mask, skip denoising entirely  
-                    dn_pre_logits = None  
-                else:  
-                    # Maintain original proportions when adjusting split sizes  
-                    original_dn = dn_meta['dn_num_split'][0]  
-                    original_reg = dn_meta['dn_num_split'][1]  
-                    original_total = original_dn + original_reg  
-                    ratio_dn = original_dn / original_total  
-                    
-                    # Apply the same ratio to the new total size  
-                    new_dn_size = int(total_size * ratio_dn)  
-                    new_regular_size = total_size - new_dn_size  
-                    dn_meta['dn_num_split'] = [new_dn_size, new_regular_size]  
-                    dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)
-                    print("111")
-            else:
-                dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)  
-                dn_pre_bboxes, pre_bboxes = torch.split(pre_bboxes, dn_meta['dn_num_split'], dim=1)  
-                
-                dn_out_logits, out_logits = torch.split(out_logits, dn_meta['dn_num_split'], dim=2)  
-                dn_out_bboxes, out_bboxes = torch.split(out_bboxes, dn_meta['dn_num_split'], dim=2)  
-                
-                dn_out_corners, out_corners = torch.split(out_corners, dn_meta['dn_num_split'], dim=2)  
-                dn_out_refs, out_refs = torch.split(out_refs, dn_meta['dn_num_split'], dim=2)   
-        else:
-            dn_pre_logits = None
             # the output from the first decoder layer, only one
-            # dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)
-            # dn_pre_bboxes, pre_bboxes = torch.split(pre_bboxes, dn_meta['dn_num_split'], dim=1)
+            dn_pre_logits, pre_logits = torch.split(pre_logits, dn_meta['dn_num_split'], dim=1)
+            dn_pre_bboxes, pre_bboxes = torch.split(pre_bboxes, dn_meta['dn_num_split'], dim=1)
 
-            # dn_out_logits, out_logits = torch.split(out_logits, dn_meta['dn_num_split'], dim=2)
-            # dn_out_bboxes, out_bboxes = torch.split(out_bboxes, dn_meta['dn_num_split'], dim=2)
+            dn_out_logits, out_logits = torch.split(out_logits, dn_meta['dn_num_split'], dim=2)
+            dn_out_bboxes, out_bboxes = torch.split(out_bboxes, dn_meta['dn_num_split'], dim=2)
 
-            # dn_out_corners, out_corners = torch.split(out_corners, dn_meta['dn_num_split'], dim=2)
-            # dn_out_refs, out_refs = torch.split(out_refs, dn_meta['dn_num_split'], dim=2)
+            dn_out_corners, out_corners = torch.split(out_corners, dn_meta['dn_num_split'], dim=2)
+            dn_out_refs, out_refs = torch.split(out_refs, dn_meta['dn_num_split'], dim=2)
 
 
         if self.training:
@@ -847,30 +757,17 @@ class DFINETransformer(nn.Module):
         else:
             out = {'pred_logits': out_logits[-1], 'pred_boxes': out_bboxes[-1]}
 
-        # if self.training and self.aux_loss:
-        #     out['aux_outputs'] = self._set_aux_loss2(out_logits[:-1], out_bboxes[:-1], out_corners[:-1], out_refs[:-1],
-        #                                              out_corners[-1], out_logits[-1])
-        #     out['enc_aux_outputs'] = self._set_aux_loss(enc_topk_logits_list, enc_topk_bboxes_list)
-        #     out['pre_outputs'] = {'pred_logits': pre_logits, 'pred_boxes': pre_bboxes}
-        #     out['enc_meta'] = {'class_agnostic': self.query_select_method == 'agnostic'}
+        if self.training and self.aux_loss:
+            out['aux_outputs'] = self._set_aux_loss2(out_logits[:-1], out_bboxes[:-1], out_corners[:-1], out_refs[:-1],
+                                                     out_corners[-1], out_logits[-1])
+            out['enc_aux_outputs'] = self._set_aux_loss(enc_topk_logits_list, enc_topk_bboxes_list)
+            out['pre_outputs'] = {'pred_logits': pre_logits, 'pred_boxes': pre_bboxes}
+            out['enc_meta'] = {'class_agnostic': self.query_select_method == 'agnostic'}
 
-        #     if dn_meta is not None:
-        #         out['dn_outputs'] = self._set_aux_loss2(dn_out_logits, dn_out_bboxes, dn_out_corners, dn_out_refs,
-        #                                                 dn_out_corners[-1], dn_out_logits[-1])
-        #         out['dn_pre_outputs'] = {'pred_logits': dn_pre_logits, 'pred_boxes': dn_pre_bboxes}
-        #         out['dn_meta'] = dn_meta
-        if self.training and self.aux_loss:  
-            out['aux_outputs'] = self._set_aux_loss2(out_logits[:-1], out_bboxes[:-1], out_corners[:-1], out_refs[:-1],  
-                                                    out_corners[-1], out_logits[-1])  
-            out['enc_aux_outputs'] = self._set_aux_loss(enc_topk_logits_list, enc_topk_bboxes_list)  
-            out['pre_outputs'] = {'pred_logits': pre_logits, 'pred_boxes': pre_bboxes}  
-            out['enc_meta'] = {'class_agnostic': self.query_select_method == 'agnostic'}  
-        
-            # Add check for dn_out_logits and other denoising variables  
-            if dn_meta is not None and 'dn_out_logits' in locals() and dn_out_logits is not None:  
-                out['dn_outputs'] = self._set_aux_loss2(dn_out_logits, dn_out_bboxes, dn_out_corners, dn_out_refs,  
-                                                        dn_out_corners[-1], dn_out_logits[-1])  
-                out['dn_pre_outputs'] = {'pred_logits': dn_pre_logits, 'pred_boxes': dn_pre_bboxes}  
+            if dn_meta is not None:
+                out['dn_outputs'] = self._set_aux_loss2(dn_out_logits, dn_out_bboxes, dn_out_corners, dn_out_refs,
+                                                        dn_out_corners[-1], dn_out_logits[-1])
+                out['dn_pre_outputs'] = {'pred_logits': dn_pre_logits, 'pred_boxes': dn_pre_bboxes}
                 out['dn_meta'] = dn_meta
 
         return out

@@ -16,9 +16,8 @@ from engine.misc import dist_utils
 from engine.core import YAMLConfig, yaml_utils
 from engine.solver import TASKS
 
-debug=True
+debug=False
 
-os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 if debug:
     import torch
     def custom_repr(self):

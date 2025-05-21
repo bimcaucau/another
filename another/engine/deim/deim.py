@@ -17,22 +17,16 @@ class DEIM(nn.Module):
         backbone: nn.Module,
         encoder: nn.Module,
         decoder: nn.Module,
-        
     ):
         super().__init__()
         self.backbone = backbone
         self.decoder = decoder
         self.encoder = encoder
-        self.projection_layer = nn.Conv2d(384, 256, kernel_size=1)
+
     def forward(self, x, targets=None):
         x = self.backbone(x)
-        encoder_features = self.encoder(x)
-
-        projected_features = []
-
-        for feat in encoder_features:
-            projected_features.append(self.projection_layer(feat))
-        x = self.decoder(projected_features, targets)
+        x = self.encoder(x)
+        x = self.decoder(x, targets)
 
         return x
 
