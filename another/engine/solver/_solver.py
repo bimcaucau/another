@@ -52,7 +52,7 @@ class BaseSolver(object):
             self.load_tuning_state(self.cfg.tuning)
 
         self.model = dist_utils.warp_model(
-            self.model.to(device), sync_bn=cfg.sync_bn, find_unused_parameters=cfg.find_unused_parameters
+            self.model.to(device), sync_bn=cfg.sync_bn, find_unused_parameters=True #cfg.find_unused_parameters
         )
 
         self.criterion = self.to(cfg.criterion, device)
