@@ -409,7 +409,7 @@ class DFINETransformer(nn.Module):
     def __init__(self,
                  num_classes=80,
                  hidden_dim=256,
-                 num_queries=300,
+                 num_queries=400,
                  feat_channels=[512, 1024, 2048],
                  feat_strides=[8, 16, 32],
                  num_levels=3,
