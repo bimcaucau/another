@@ -16,7 +16,7 @@ from engine.misc import dist_utils
 from engine.core import YAMLConfig, yaml_utils
 from engine.solver import TASKS
 
-debug=False
+debug=True
 
 if debug:
     import torch
